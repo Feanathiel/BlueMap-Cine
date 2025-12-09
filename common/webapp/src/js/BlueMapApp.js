@@ -26,6 +26,7 @@ import "./BlueMap";
 import {MapViewer} from "./MapViewer";
 import {MapControls} from "./controls/map/MapControls";
 import {FreeFlightControls} from "./controls/freeflight/FreeFlightControls";
+import {AnimationControls} from "@/js/controls/map/AnimationControls";
 import {FileLoader, MathUtils, Vector3} from "three";
 import {Map as BlueMapMap} from "./map/Map";
 import {alert, animate, EasingFunctions, generateCacheHash} from "./util/Utils";
@@ -50,6 +51,7 @@ export class BlueMapApp {
 
         this.mapControls = new MapControls(this.mapViewer.renderer.domElement, rootElement);
         this.freeFlightControls = new FreeFlightControls(this.mapViewer.renderer.domElement);
+        this.animationControls = new AnimationControls(this.mapViewer.renderer.domElement);
 
         /** @type {PlayerMarkerManager} */
         this.playerMarkerManager = null;
@@ -563,6 +565,21 @@ export class BlueMapApp {
         this.appState.controls.state = "free";
     }
 
+    setAnimation() {
+        if (!this.mapViewer.map) return;
+        if (!this.mapViewer.map.data.animationView) return;
+        if (this.viewAnimation) this.viewAnimation.cancel();
+
+        let cm = this.mapViewer.controlsManager;
+        cm.controls = null;
+
+        this.animationControls.reset();
+        cm.controls = this.animationControls;
+
+        this.appState.controls.state = "animation";
+        this.updatePageAddress();
+    }
+
     setChunkBorders(chunkBorders) {
         this.mapViewer.data.uniforms.chunkBorders.value = chunkBorders;
     }
@@ -776,6 +793,7 @@ export class BlueMapApp {
         switch (values[9]) {
             case "flat" : this.setFlatView(0); break;
             case "free" : this.setFreeFlight(0, controls.position.y); break;
+            case "animation" : this.setAnimation(); break;
             default : this.setPerspectiveView(0); break;
         }
 

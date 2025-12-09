@@ -45,6 +45,7 @@ export class ControlsManager {
 			rotation: 0,
 			angle: 0,
 			tilt: 0,
+            backdropOpacity: 0
 		});
 
 		this.mapViewer = mapViewer;
@@ -333,4 +334,12 @@ export class ControlsManager {
 	set tilt(value) {
 		this.data.tilt = value;
 	}
+
+    get backdropOpacity() {
+        return this.data.backdropOpacity;
+    }
+
+    set backdropOpacity(value) {
+        this.data.backdropOpacity = value;
+    }
 }

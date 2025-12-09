@@ -4,7 +4,9 @@
     <ZoomButtons v-if="showMapMenu && appState.controls.showZoomButtons && appState.controls.state !== 'free'" />
     <ControlBar />
     <div v-if="mapViewer.mapState !== 'loaded'" class="map-state-message">{{ $t("map." + mapViewer.mapState) }}</div>
+    <ColoredOverlay />
     <MainMenu :menu="appState.menu" />
+    <MainControls />
   </div>
 </template>
 
@@ -13,10 +15,14 @@ import ControlBar from "./components/ControlBar/ControlBar.vue";
 import MainMenu from "./components/Menu/MainMenu.vue";
 import FreeFlightMobileControls from "./components/Controls/FreeFlightMobileControls.vue";
 import ZoomButtons from "./components/Controls/ZoomButtons.vue";
+import ColoredOverlay from "@/components/Overlay/ColoredOverlay.vue";
+import AnimationControls from "@/components/ControlBar/AnimationControls.vue";
 
 export default {
   name: 'App',
   components: {
+    MainControls: AnimationControls,
+    ColoredOverlay,
     FreeFlightMobileControls,
     MainMenu,
     ControlBar,

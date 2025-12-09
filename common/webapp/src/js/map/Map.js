@@ -82,7 +82,8 @@ export class Map {
 			perspectiveView: false,
 			flatView: false,
 			freeFlightView: false,
-			views: ["perspective", "flat", "free"]
+            animationView: false,
+			views: ["perspective", "flat", "free", "animation"]
 		});
 
 		this.raycaster = new Raycaster();
@@ -205,11 +206,16 @@ export class Map {
 				this.data.perspectiveView = worldSettings.perspectiveView !== undefined ? worldSettings.perspectiveView : this.data.perspectiveView;
 				this.data.flatView = worldSettings.flatView !== undefined ? worldSettings.flatView : this.data.flatView;
 				this.data.freeFlightView = worldSettings.freeFlightView !== undefined ? worldSettings.freeFlightView : this.data.freeFlightView;
+                this.data.animationView = worldSettings.animationView !== undefined ? worldSettings.animationView : this.data.animationView;
+
+                // Override
+                this.data.animationView = true;
 
 				this.data.views = [];
 				if (this.data.perspectiveView) this.data.views.push("perspective");
 				if (this.data.flatView) this.data.views.push("flat");
 				if (this.data.freeFlightView) this.data.views.push("free");
+                if (this.data.animationView) this.data.views.push("animation");
 
 				alert(this.events, `Settings for map '${this.data.id}' loaded.`, "fine");
 			});

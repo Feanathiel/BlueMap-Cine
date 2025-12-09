@@ -43,6 +43,8 @@
       </svg>
     </SvgButton>
     <div class="space thin-hide greedy"></div>
+    <AnimationControls />
+    <div class="space thin-hide"></div>
     <DayNightSwitch v-if="showMapMenu" class="thin-hide" :title="$t('lighting.dayNightSwitch.tooltip')" />
     <div class="space thin-hide"></div>
     <ControlsSwitch v-if="showMapMenu && showViewControls" class="thin-hide"></ControlsSwitch>
@@ -61,6 +63,7 @@
 </template>
 
 <script>
+  import AnimationControls from "./AnimationControls.vue";
   import PositionInput from "./PositionInput.vue";
   import Compass from "./Compass.vue";
   import DayNightSwitch from "./DayNightSwitch.vue";
@@ -71,6 +74,7 @@
   export default {
     name: "ControlBar",
     components: {
+      AnimationControls,
       SvgButton,
       MenuButton,
       ControlsSwitch,

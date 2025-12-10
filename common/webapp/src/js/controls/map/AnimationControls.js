@@ -1,4 +1,4 @@
-import {AnimationClip, AnimationMixer, LoopOnce} from "three";
+import {AnimationClip, AnimationMixer, LoopOnce, LoopRepeat} from "three";
 import {AniVectorKeyframeTrack} from "@/js/util/AniVectorKeyframeTrack";
 import {AniNumberKeyframeTrack} from "@/js/util/AniNumberKeyframeTrack";
 import {AniInterpolant} from "@/js/util/AniInterpolant";
@@ -174,6 +174,7 @@ export class AnimationControls {
 
         const cameraTracks = [];
         let durationOffset = 0;
+        // merge multiple tracks for the same property tracks into a single track
 
         for (const scene of animations.scenes) {
             for (const track of scene.tracks) {
@@ -222,7 +223,7 @@ export class AnimationControls {
         this.actions = {
             camera: (() => {
                 const action = this.mixers.camera.clipAction(clips.camera);
-                action.setLoop(LoopOnce);
+                action.setLoop(LoopRepeat);
                 action.startAt(0);                // delay in seconds
                 action.clampWhenFinished = true;
 
@@ -239,6 +240,7 @@ export class AnimationControls {
 
     play() {
         if (this.actions.camera) {
+            this.actions.camera.reset();
             this.actions.camera.play();
         }
     }

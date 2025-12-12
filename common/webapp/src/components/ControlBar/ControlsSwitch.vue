@@ -78,7 +78,7 @@
         this.$bluemap.setFreeFlight(500);
       },
       setAnimation() {
-        this.$bluemap.setAnimation(500);
+        this.$bluemap.setAnimation();
       }
     }
   }

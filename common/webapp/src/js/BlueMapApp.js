@@ -565,7 +565,7 @@ export class BlueMapApp {
         this.appState.controls.state = "free";
     }
 
-    setAnimation() {
+    setAnimation(animationParams) {
         if (!this.mapViewer.map) return;
         if (!this.mapViewer.map.data.animationView) return;
         if (this.viewAnimation) this.viewAnimation.cancel();
@@ -573,7 +573,7 @@ export class BlueMapApp {
         let cm = this.mapViewer.controlsManager;
         cm.controls = null;
 
-        this.animationControls.reset();
+        this.animationControls.reset(animationParams);
         cm.controls = this.animationControls;
 
         this.appState.controls.state = "animation";
@@ -793,8 +793,16 @@ export class BlueMapApp {
         switch (values[9]) {
             case "flat" : this.setFlatView(0); break;
             case "free" : this.setFreeFlight(0, controls.position.y); break;
-            case "animation" : this.setAnimation(); break;
-            default : this.setPerspectiveView(0); break;
+            default : {
+                const animation = /animation(?:\/(.*))?/.exec(values[9]);
+                if (animation) {
+                    this.setAnimation(animation[1]);
+                } else {
+                    this.setPerspectiveView(0);
+                }
+
+                break;
+            }
         }
 
         controls.position.x = parseFloat(values[1]);

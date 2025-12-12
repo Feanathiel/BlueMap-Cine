@@ -1,4 +1,4 @@
-import {AnimationClip, AnimationMixer, LoopOnce, LoopRepeat} from "three";
+import {AnimationClip, AnimationMixer, LoopRepeat} from "three";
 import {AniVectorKeyframeTrack} from "@/js/util/AniVectorKeyframeTrack";
 import {AniNumberKeyframeTrack} from "@/js/util/AniNumberKeyframeTrack";
 import {AniInterpolant} from "@/js/util/AniInterpolant";
@@ -24,14 +24,6 @@ export class AnimationControls {
     start(manager) {
         this.manager = manager;
         this.rootElement.addEventListener("contextmenu", this.onContextMenu);
-
-        if (this.init) {
-            this._loadFromInit(this.init.animations);
-
-            if (this.init.autoStart) {
-                this.play();
-            }
-        }
     }
 
     stop() {
@@ -41,14 +33,14 @@ export class AnimationControls {
     }
 
     play() {
-        if (this.actions.camera) {
+        if (this.actions?.camera) {
             this.actions.camera.reset();
             this.actions.camera.play();
         }
     }
 
     pause() {
-        if (this.actions.camera) {
+        if (this.actions?.camera) {
             this.actions.camera.halt();
         }
     }
@@ -58,7 +50,7 @@ export class AnimationControls {
      * @param map {Map}
      */
     update(delta, map) {
-        if (this.mixers.camera) {
+        if (this.mixers?.camera) {
             this.mixers.camera.update(delta);
         }
     }
@@ -66,19 +58,34 @@ export class AnimationControls {
     reset(animationParams) {
         const parsedParams = new URLSearchParams(animationParams ?? "");
 
-        if (parsedParams.get("mode") === "rotate") {
-            // localhost:5173/#overworld:0:0:0:1500:0:0:0:0:animation/mode=rotate&autostart=true&duration=100000&posX=-140&posY=60&posZ=-338&angle=60&distance=60
+        const mode = parsedParams.get("mode");
+        if (mode === "rotate") {
+            // localhost:5173/#world:44:121:-1545:60:0:1.05:0:0:animation/mode=rotate&autoStart=true&duration=180000&showUi=true
 
-            const autoStart = parsedParams.get("autostart") === "true";
-            const duration = parseInt(parsedParams.get("duration"));
-            const posX = parseFloat(parsedParams.get("posX"));
-            const posY = parseFloat(parsedParams.get("posY"));
-            const posZ = parseFloat(parsedParams.get("posZ"));
-            const angle = parseFloat(parsedParams.get("angle")) * (Math.PI / 180);
-            const distance = parseFloat(parsedParams.get("distance"));
-
-            this.init = this._initFromObjectRotateMode(duration, {x: posX, y: posY,z: posZ}, angle, distance, autoStart);
+            this.init = {
+                params: {
+                    mode: mode,
+                    autoStart: parsedParams.get("autoStart") === "true",
+                    showUi: parsedParams.get("showUi") === "true",
+                    duration: parseInt(parsedParams.get("duration"))
+                }
+            }
         }
+    }
+
+    getPageAddressParameters() {
+        if (this.init) {
+            const parsedParams = new URLSearchParams();
+
+            Object.keys(this.init.params).forEach(key => {
+                parsedParams.set(key, this.init.params[key]);
+            })
+
+
+            return "/" + parsedParams.toString();
+        }
+
+        return "";
     }
 
     onContextMenu = evt => {
@@ -97,6 +104,19 @@ export class AnimationControls {
             ortho: this.manager.camera.data.ortho,
             distance: this.manager.camera.data.distance,
         });
+    }
+
+    postInit() {
+        if(this.init && this.manager) {
+            this.init.animations = this._initFromObjectRotateMode(this.init.params);
+            this._loadFromInit(this.init.animations);
+
+            if (this.init.params.autoStart) {
+                this.play();
+            }
+
+            this.manager.data.showUi = this.init.params.showUi;
+        }
     }
 
     _loadFromInit(animations) {
@@ -165,8 +185,13 @@ export class AnimationControls {
         };
     }
 
-    _initFromObjectRotateMode(duration, position, angle, distance, autoStart) {
-        const animations = {
+    _initFromObjectRotateMode(params) {
+        const {duration} = params;
+        const position = this.manager.position;
+        const angle = this.manager.angle;
+        const distance = this.manager.distance;
+
+        return {
             scenes: [
                 {
                     duration: duration,
@@ -257,10 +282,5 @@ export class AnimationControls {
                 },
             ],
         };
-
-        return {
-            animations: animations,
-            autoStart: autoStart
-        }
     }
 }

@@ -45,7 +45,8 @@ export class ControlsManager {
 			rotation: 0,
 			angle: 0,
 			tilt: 0,
-            backdropOpacity: 0
+            backdropOpacity: 0,
+            showUi: true
 		});
 
 		this.mapViewer = mapViewer;

@@ -577,7 +577,6 @@ export class BlueMapApp {
         cm.controls = this.animationControls;
 
         this.appState.controls.state = "animation";
-        this.updatePageAddress();
     }
 
     setChunkBorders(chunkBorders) {
@@ -751,6 +750,10 @@ export class BlueMapApp {
             hash += ":" + round(controls.tilt, 2);
             hash += ":" + round(controls.ortho, 0);
             hash += ":" + this.appState.controls.state;
+
+            if(this.animationControls.getPageAddressParameters) {
+                hash += this.animationControls.getPageAddressParameters();
+            }
         }
 
         history.replaceState(undefined, undefined, hash);
@@ -816,6 +819,11 @@ export class BlueMapApp {
 
         this.updatePageAddress();
         this.mapViewer.updateLoadedMapArea();
+
+        let cm = this.mapViewer.controlsManager;
+        if (cm.controls && cm.controls.postInit) {
+            cm.controls.postInit();
+        }
 
         return true;
     }

@@ -1,12 +1,18 @@
 <template>
   <div id="app" :class="{'theme-light': appState.theme === 'light', 'theme-dark': appState.theme === 'dark', 'theme-contrast': appState.theme === 'contrast'}">
-    <FreeFlightMobileControls v-if="mapViewer.mapState === 'loaded' && appState.controls.state === 'free'" />
-    <ZoomButtons v-if="showMapMenu && appState.controls.showZoomButtons && appState.controls.state !== 'free'" />
+    <template v-if="showUi">
+      <FreeFlightMobileControls v-if="mapViewer.mapState === 'loaded' && appState.controls.state === 'free'" />
+      <ZoomButtons v-if="showMapMenu && appState.controls.showZoomButtons && appState.controls.state !== 'free'" />
+    </template>
     <ColoredOverlay />
-    <ControlBar />
+    <template v-if="showUi">
+      <ControlBar />
+    </template>
     <div v-if="mapViewer.mapState !== 'loaded'" class="map-state-message">{{ $t("map." + mapViewer.mapState) }}</div>
-    <MainMenu :menu="appState.menu" />
-    <MainControls />
+    <template v-if="showUi">
+      <MainMenu :menu="appState.menu" />
+      <MainControls />
+    </template>
   </div>
 </template>
 
@@ -31,6 +37,9 @@ export default {
   computed: {
     showMapMenu() {
       return this.mapViewer.mapState === "loading" || this.mapViewer.mapState === "loaded";
+    },
+    showUi() {
+      return this.$bluemap.mapViewer.controlsManager.data && this.$bluemap.mapViewer.controlsManager.data.showUi;
     }
   },
   data() {

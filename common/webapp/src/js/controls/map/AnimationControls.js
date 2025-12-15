@@ -1,44 +1,7 @@
 import {AnimationClip, AnimationMixer, LoopRepeat, Vector3} from "three";
-import {AniVectorKeyframeTrack} from "@/js/util/AniVectorKeyframeTrack";
-import {AniNumberKeyframeTrack} from "@/js/util/AniNumberKeyframeTrack";
-import {AniInterpolant} from "@/js/util/AniInterpolant";
-
-/**
- * @typedef Animations
- * @property {Scene[]} scenes
- */
-
-/**
- * @typedef Scene
- * @property {number} duration
- * @property {Track[]} tracks
- */
-
-/**
- * @typedef Track
- * @property {"camera.position" | "overlay.opacity" | "camera.angle" | "camera.rotation" | "camera.ortho" | "camera.distance"} property
- * @property {NumberKeyFrame[] | VectorKeyFrame[]} keyframes
- */
-
-/**
- * @typedef KeyFrame
- * @property {number} time
- */
-
-/**
- * @typedef NumberKeyFrame
- * @extends KeyFrame
- * @property {number} value
- */
-
-/**
- * @typedef VectorKeyFrame
- * @extends KeyFrame
- * @property {number} value.x
- * @property {number} value.y
- * @property {number} value.z
- */
-
+import {AniVectorKeyframeTrack} from "@/js/util/animations/keyframe-tracks/AniVectorKeyframeTrack";
+import {AniNumberKeyframeTrack} from "@/js/util/animations/keyframe-tracks/AniNumberKeyframeTrack";
+import {AniInterpolant} from "@/js/util/animations/interpolants/AniInterpolant";
 
 export class AnimationControls {
     /**

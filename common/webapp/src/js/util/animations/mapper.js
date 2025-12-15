@@ -6,6 +6,7 @@ import {AnimationClip, AnimationMixer, LoopRepeat} from "three";
 
 /**
  * @param {Animations} animations
+ * @param {Config} config
  * @private
  */
 export function mapMixersActions(animations, config) {

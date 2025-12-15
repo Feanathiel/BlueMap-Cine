@@ -34,3 +34,11 @@
  * @property {number} value.y
  * @property {number} value.z
  */
+
+/**
+ * @typedef Config
+ * @property {Object} target
+ * @property {string} property
+ * @property {'number' | 'vector'} type
+ * @property {Object | number} default
+ */

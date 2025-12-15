@@ -1,8 +1,4 @@
-import {AnimationClip, AnimationMixer, LoopRepeat} from "three";
-import {AniVectorKeyframeTrack} from "@/js/util/animations/keyframe-tracks/AniVectorKeyframeTrack";
-import {AniNumberKeyframeTrack} from "@/js/util/animations/keyframe-tracks/AniNumberKeyframeTrack";
-import {AniInterpolant} from "@/js/util/animations/interpolants/AniInterpolant";
-import {RefMap} from "@/js/util/animations/ref-map";
+import {mapMixersActions} from "@/js/util/animations/mapper";
 
 export class AnimationControls {
     /**
@@ -17,8 +13,7 @@ export class AnimationControls {
         this.manager = null;
 
         this.init = null;
-        this.mixers = {};
-        this.actions = {};
+        this.mixerActions = [];
     }
 
     /**
@@ -36,19 +31,15 @@ export class AnimationControls {
     }
 
     play() {
-        if (this.actions) {
-            for (const action of Object.values(this.actions)) {
-                action.reset();
-                action.play();
-            }
+        for (const mixerAction of this.mixerActions) {
+            mixerAction.action.reset();
+            mixerAction.action.play();
         }
     }
 
     pause() {
-        if (this.actions) {
-            for (const action of Object.values(this.actions)) {
-                action.halt();
-            }
+        for (const mixerAction of this.mixerActions) {
+            mixerAction.action.halt();
         }
     }
 
@@ -57,10 +48,8 @@ export class AnimationControls {
      * @param map {Map}
      */
     update(delta, map) {
-        if (this.mixers) {
-            for (const mixer of Object.values(this.mixers)) {
-                mixer.update(delta);
-            }
+        for (const mixerAction of this.mixerActions) {
+            mixerAction.mixer.update(delta);
         }
     }
 
@@ -149,94 +138,22 @@ export class AnimationControls {
      * @private
      */
     _loadFromInit(animations) {
-        if (this.mixers) {
-            for (const mixer of Object.values(this.mixers)) {
-                mixer.stopAllAction();
-            }
+        for (const mixerAction of this.mixerActions) {
+            mixerAction.mixer.stopAllAction();
         }
 
-        const {mixers, actions} = this._mapMixersActions(animations);
-
-        this.mixers = mixers;
-        this.actions = actions;
-    }
-
-    /**
-     * @param {Animations} animations
-     * @private
-     */
-    _mapMixersActions(animations) {
-        const propConfig = this._propConfig();
-        const targets = {};
-
-        const refMap = new RefMap();
-
-        for (const key in propConfig) {
-            const item = propConfig[key];
-            const sortedKeyFrameValues = this._mapToSortedKeyFrameValues(animations, key, item.default);
-
-            const interpolant = (tr, result) => new AniInterpolant(
-                sortedKeyFrameValues.map(kf => kf.interpolation),
-                tr.times,
-                tr.values,
-                tr.getValueSize(),
-                result
-            );
-
-            let keyframeTrack = null;
-
-            if (item.type === "number") {
-                keyframeTrack = new AniNumberKeyframeTrack(
-                    item.property,
-                    sortedKeyFrameValues.map(kf => kf.time),
-                    sortedKeyFrameValues.map(kf => kf.value),
-                    interpolant,
-                );
-            } else if (item.type === "vector") {
-                keyframeTrack = new AniVectorKeyframeTrack(
-                    item.property,
-                    sortedKeyFrameValues.map(kf => kf.time),
-                    sortedKeyFrameValues.flatMap(kf => [kf.value.x, kf.value.y, kf.value.z]),
-                    interpolant,
-                );
-            } else {
-                throw new Error(`Unknown property: ${key}`);
-            }
-
-            const id = refMap.getId(item.target);
-
-            if (!targets[id]) {
-                targets[id] = {
-                    target: item.target,
-                    tracks: [],
-                };
-            }
-
-            targets[id].tracks.push(keyframeTrack);
-        }
-
-        const durationTotal = animations.scenes.reduce((prev, curr) => prev + curr.duration, 0);
-
-        const mixers = {};
-        const actions = {};
-
-        for (const [key, target] of Object.entries(targets)) {
-            const clips = new AnimationClip('Action-Camera', durationTotal, target.tracks);
-            const mixer = new AnimationMixer(target.target);
-
-            const action = mixer.clipAction(clips);
-            action.setLoop(LoopRepeat);
-            action.startAt(0);                // delay in seconds
-            action.clampWhenFinished = true;
-
-            mixers[key] = mixer;
-            actions[key] = action;
-        }
-
-        return {
-            mixers,
-            actions,
+        const config = {
+            "camera.position": {target: this.manager, property: ".position", type: 'vector', default: {x: 0, y: 0, z: 0}},
+            "overlay.opacity": {target: this.manager, property: ".backdropOpacity", type: 'number', default: 0},
+            "camera.angle": {target: this.manager, property: ".angle", type: 'number', default: 0},
+            "camera.rotation": {target: this.manager, property: ".rotation", type: 'number', default: 0},
+            "camera.ortho": {target: this.manager, property: ".ortho", type: 'number', default: 0},
+            "camera.distance": {target: this.manager, property: ".distance", type: 'number', default: 0},
+            "light.sun": {target: this.manager.mapViewer.data.uniforms.sunlightStrength, property: ".value", type: 'number', default: 1},
+            "light.ambient": {target: this.manager.mapViewer.data.uniforms.ambientLight, property: ".value", type: 'number', default: 0.1},
         };
+
+        this.mixerActions = mapMixersActions(animations, config);
     }
 
     _initFromObjectRotateMode(params) {
@@ -302,119 +219,5 @@ export class AnimationControls {
     _initFromCineJson(params) {
         const {data} = params;
         return JSON.parse(atob(data));
-    }
-
-    _mapToSortedKeyFrameValues(animations, key, defaultsKey) {
-        const keyFrameValues = [];
-
-        let durationOffset = 0;
-
-        for (const scene of animations.scenes) {
-            let minKeyFrameValue = null;
-            let maxKeyFrameValue = null;
-            let containsSceneStart = false;
-            let containsSceneEnd = false;
-
-            for (const track of scene.tracks) {
-                if (track.property !== key) {
-                    continue;
-                }
-
-                for (const keyFrame of track.keyframes) {
-                    let time = keyFrame.time;
-
-                    if (keyFrame.time === 0) {
-                        containsSceneStart = true;
-                    }
-
-                    if (keyFrame.time === scene.duration) {
-                        containsSceneEnd = true;
-                        time = keyFrame.time -1;
-                    }
-
-                    const keyFrameValue = {
-                        interpolation: keyFrame.interpolation,
-                        time: time + durationOffset,
-                        value: keyFrame.value,
-                    };
-
-                    if (minKeyFrameValue === null || minKeyFrameValue.time > keyFrameValue.time) {
-                        minKeyFrameValue = keyFrameValue;
-                    }
-
-                    if (maxKeyFrameValue === null || maxKeyFrameValue.time < keyFrameValue.time) {
-                        maxKeyFrameValue = keyFrameValue;
-                    }
-
-                    keyFrameValues.push(keyFrameValue);
-                }
-            }
-
-            if (!containsSceneStart) {
-                if (minKeyFrameValue) {
-                    keyFrameValues.push({
-                        interpolation: 'linear',
-                        time: durationOffset,
-                        value: minKeyFrameValue.value
-                    });
-                } else {
-                    keyFrameValues.push({
-                        interpolation: 'linear',
-                        time: durationOffset,
-                        value: defaultsKey
-                    });
-                }
-            }
-
-            // Fix the cubic keyframes, since they tween over an additional keyframe
-            if (minKeyFrameValue && minKeyFrameValue.interpolation === "cubic") {
-                keyFrameValues.push({
-                    interpolation: 'cubic',
-                    time: durationOffset+1,
-                    value: minKeyFrameValue.value
-                });
-            }
-
-            if (maxKeyFrameValue && maxKeyFrameValue.interpolation === "cubic") {
-                keyFrameValues.push({
-                    interpolation: 'cubic',
-                    time: durationOffset + scene.duration - 2,
-                    value: maxKeyFrameValue.value
-                });
-            }
-
-            if (!containsSceneEnd) {
-                if (maxKeyFrameValue) {
-                    keyFrameValues.push({
-                        interpolation: 'linear',
-                        time: durationOffset + scene.duration - 1,
-                        value: maxKeyFrameValue.value
-                    });
-                } else {
-                    keyFrameValues.push({
-                        interpolation: 'linear',
-                        time: durationOffset + scene.duration - 1,
-                        value: defaultsKey
-                    });
-                }
-            }
-
-            durationOffset += scene.duration;
-        }
-
-        return keyFrameValues.toSorted((a, b) => a.time - b.time);
-    }
-
-    _propConfig() {
-        return {
-            "camera.position": {target: this.manager, property: ".position", type: 'vector', default: {x: 0, y: 0, z: 0}},
-            "overlay.opacity": {target: this.manager, property: ".backdropOpacity", type: 'number', default: 0},
-            "camera.angle": {target: this.manager, property: ".angle", type: 'number', default: 0},
-            "camera.rotation": {target: this.manager, property: ".rotation", type: 'number', default: 0},
-            "camera.ortho": {target: this.manager, property: ".ortho", type: 'number', default: 0},
-            "camera.distance": {target: this.manager, property: ".distance", type: 'number', default: 0},
-            "light.sun": {target: this.manager.mapViewer.data.uniforms.sunlightStrength, property: ".value", type: 'number', default: 1},
-            "light.ambient": {target: this.manager.mapViewer.data.uniforms.ambientLight, property: ".value", type: 'number', default: 0.1},
-        };
     }
 }

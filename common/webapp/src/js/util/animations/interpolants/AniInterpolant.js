@@ -1,14 +1,17 @@
-import {Interpolant, LinearInterpolant, CubicInterpolant} from "three";
+import {Interpolant} from "three";
+import {AniEasingInterpolant} from "@/js/util/animations/interpolants/AniEasingInterpolant";
+import {EasingFunctions} from "@/js/util/Utils";
 
 export class AniInterpolant extends Interpolant {
     constructor(interpolantIds, parameterPositions, sampleValues, sampleSize, resultBuffer) {
         super(parameterPositions, sampleValues, sampleSize, resultBuffer);
 
         this.interpolantIds = interpolantIds;
-        this.interpolants = {
-            linear: new LinearInterpolant(parameterPositions, sampleValues, sampleSize),
-            cubic: new CubicInterpolant(parameterPositions, sampleValues, sampleSize),
-        };
+        this.interpolants = {};
+
+        for (const [key, func] of Object.entries(EasingFunctions)) {
+            this.interpolants[key] = new AniEasingInterpolant(parameterPositions, sampleValues, sampleSize, undefined, func);
+        }
     }
 
     evaluate(t) {

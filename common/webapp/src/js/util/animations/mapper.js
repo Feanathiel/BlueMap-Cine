@@ -141,23 +141,6 @@ function _mapToSortedKeyFrameValues(animations, key, defaultsKey) {
             }
         }
 
-        // Fix the cubic keyframes, since they tween over an additional keyframe
-        if (minKeyFrameValue && minKeyFrameValue.interpolation === "cubic") {
-            keyFrameValues.push({
-                interpolation: 'cubic',
-                time: durationOffset+1,
-                value: minKeyFrameValue.value
-            });
-        }
-
-        if (maxKeyFrameValue && maxKeyFrameValue.interpolation === "cubic") {
-            keyFrameValues.push({
-                interpolation: 'cubic',
-                time: durationOffset + scene.duration - 2,
-                value: maxKeyFrameValue.value
-            });
-        }
-
         if (!containsSceneEnd) {
             if (maxKeyFrameValue) {
                 keyFrameValues.push({

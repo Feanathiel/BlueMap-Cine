@@ -7,7 +7,6 @@ export class AniEasingInterpolant extends Interpolant {
     }
 
     interpolate_( i1, t0, t, t1 ) {
-
         const result = this.resultBuffer,
             values = this.sampleValues,
             stride = this.valueSize,
@@ -20,14 +19,10 @@ export class AniEasingInterpolant extends Interpolant {
         const e1 = this.easingFunction(weight1);
         const e0 = 1-e1;
 
-        console.log(weight1);
-
         for ( let i = 0; i !== stride; ++ i ) {
             result[ i ] = values[ offset0 + i ] * e0 + values[ offset1 + i ] * e1;
         }
 
         return result;
-
     }
-
 }

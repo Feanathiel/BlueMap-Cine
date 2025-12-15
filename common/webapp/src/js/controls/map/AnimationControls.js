@@ -2,6 +2,7 @@ import {AnimationClip, AnimationMixer, LoopRepeat} from "three";
 import {AniVectorKeyframeTrack} from "@/js/util/animations/keyframe-tracks/AniVectorKeyframeTrack";
 import {AniNumberKeyframeTrack} from "@/js/util/animations/keyframe-tracks/AniNumberKeyframeTrack";
 import {AniInterpolant} from "@/js/util/animations/interpolants/AniInterpolant";
+import {RefMap} from "@/js/util/animations/ref-map";
 
 export class AnimationControls {
     /**
@@ -79,7 +80,7 @@ export class AnimationControls {
                 }
             }
         } else if (mode === "cine") {
-            // localhost:5173/#world:0:0:0:0:0:0:0:0:animation/mode=cine&autoStart=true&showUi=false&data=eyJzY2VuZXMiOlt7ImR1cmF0aW9uIjoxODAwMCwidHJhY2tzIjpbeyJwcm9wZXJ0eSI6Im92ZXJsYXkub3BhY2l0eSIsImtleWZyYW1lcyI6W3sidGltZSI6MCwiaW50ZXJwb2xhdGlvbiI6ImxpbmVhciIsInZhbHVlIjoxfSx7InRpbWUiOjMwMDAsImludGVycG9sYXRpb24iOiJsaW5lYXIiLCJ2YWx1ZSI6MH0seyJ0aW1lIjoxNTAwMCwiaW50ZXJwb2xhdGlvbiI6ImxpbmVhciIsInZhbHVlIjowfSx7InRpbWUiOjE4MDAwLCJpbnRlcnBvbGF0aW9uIjoibGluZWFyIiwidmFsdWUiOjF9XX0seyJwcm9wZXJ0eSI6ImNhbWVyYS5wb3NpdGlvbiIsImtleWZyYW1lcyI6W3sidGltZSI6MCwiaW50ZXJwb2xhdGlvbiI6ImN1YmljIiwidmFsdWUiOnsieCI6NTUuODQwNTAwNTA1Njc1MzYsInkiOjU5LjE3ODUzNjQ2MzE5Mjc4LCJ6IjotMTU1MC4yNTMzNjQ5Mzk1MDQ1fX0seyJ0aW1lIjoxODAwMCwiaW50ZXJwb2xhdGlvbiI6ImN1YmljIiwidmFsdWUiOnsieCI6MzAuODYxNzM0NzM1MjgxNjEsInkiOjExMy4zNTUsInoiOi0xNTQ1LjI5NzEzMTUzNDQ0MzV9fV19LHsicHJvcGVydHkiOiJjYW1lcmEuYW5nbGUiLCJrZXlmcmFtZXMiOlt7InRpbWUiOjAsImludGVycG9sYXRpb24iOiJjdWJpYyIsInZhbHVlIjowLjg4NDAxNjQxNjY1NzE1NTJ9LHsidGltZSI6MTgwMDAsImludGVycG9sYXRpb24iOiJjdWJpYyIsInZhbHVlIjoxLjQwMzcxNTQyNTYzMDg2OTV9XX0seyJwcm9wZXJ0eSI6ImNhbWVyYS5yb3RhdGlvbiIsImtleWZyYW1lcyI6W3sidGltZSI6MCwiaW50ZXJwb2xhdGlvbiI6ImN1YmljIiwidmFsdWUiOjEuNTgzMzYyODM1MjQ4OTc5NX0seyJ0aW1lIjoxODAwMCwiaW50ZXJwb2xhdGlvbiI6ImN1YmljIiwidmFsdWUiOjEuNTc4OTQ4NjQ5Njg3MTI0M31dfSx7InByb3BlcnR5IjoiY2FtZXJhLmRpc3RhbmNlIiwia2V5ZnJhbWVzIjpbeyJ0aW1lIjowLCJpbnRlcnBvbGF0aW9uIjoiY3ViaWMiLCJ2YWx1ZSI6MjM4LjE0ODA2ODc0NjkzNDY1fSx7InRpbWUiOjE4MDAwLCJpbnRlcnBvbGF0aW9uIjoiY3ViaWMiLCJ2YWx1ZSI6NX1dfV19LHsiZHVyYXRpb24iOjEwMDAwLCJ0cmFja3MiOlt7InByb3BlcnR5Ijoib3ZlcmxheS5vcGFjaXR5Iiwia2V5ZnJhbWVzIjpbeyJ0aW1lIjowLCJpbnRlcnBvbGF0aW9uIjoibGluZWFyIiwidmFsdWUiOjF9LHsidGltZSI6MjAwMCwiaW50ZXJwb2xhdGlvbiI6ImxpbmVhciIsInZhbHVlIjowfSx7InRpbWUiOjgwMDAsImludGVycG9sYXRpb24iOiJsaW5lYXIiLCJ2YWx1ZSI6MH0seyJ0aW1lIjoxMDAwMCwiaW50ZXJwb2xhdGlvbiI6ImxpbmVhciIsInZhbHVlIjoxfV19LHsicHJvcGVydHkiOiJjYW1lcmEucG9zaXRpb24iLCJrZXlmcmFtZXMiOlt7InRpbWUiOjAsImludGVycG9sYXRpb24iOiJjdWJpYyIsInZhbHVlIjp7IngiOjM4LjEzMjQxNTc2OTE4NTgyNiwieSI6MTEyLjMzNDI1NjI5ODI5MTgsInoiOi0xNTc1LjIyODQwMzIxMDAyN319LHsidGltZSI6MTAwMDAsImludGVycG9sYXRpb24iOiJjdWJpYyIsInZhbHVlIjp7IngiOjM4LjEzMjQxNTc2OTE4NTgyNiwieSI6MTEyLjMzNDI1NjI5ODI5MTgsInoiOi0xNTI1LjgyNjE2ODMwMzk1MTF9fV19LHsicHJvcGVydHkiOiJjYW1lcmEuYW5nbGUiLCJrZXlmcmFtZXMiOlt7InRpbWUiOjAsImludGVycG9sYXRpb24iOiJsaW5lYXIiLCJ2YWx1ZSI6MS40NTUzNjM1MzIwNTk1MTQ0fV19LHsicHJvcGVydHkiOiJjYW1lcmEucm90YXRpb24iLCJrZXlmcmFtZXMiOlt7InRpbWUiOjAsImludGVycG9sYXRpb24iOiJsaW5lYXIiLCJ2YWx1ZSI6MS41NjczMjgxMDc2NTU0MzUzfV19LHsicHJvcGVydHkiOiJjYW1lcmEuZGlzdGFuY2UiLCJrZXlmcmFtZXMiOlt7InRpbWUiOjAsImludGVycG9sYXRpb24iOiJsaW5lYXIiLCJ2YWx1ZSI6MTUuOH1dfV19XX0=
+            // localhost:5173/#world:0:0:0:0:0:0:0:0:animation/mode=cine&autoStart=true&showUi=false&data=eyJzY2VuZXMiOlt7ImR1cmF0aW9uIjoxODAwMCwidHJhY2tzIjpbeyJwcm9wZXJ0eSI6Im92ZXJsYXkub3BhY2l0eSIsImtleWZyYW1lcyI6W3sidGltZSI6MCwiaW50ZXJwb2xhdGlvbiI6ImxpbmVhciIsInZhbHVlIjoxfSx7InRpbWUiOjMwMDAsImludGVycG9sYXRpb24iOiJsaW5lYXIiLCJ2YWx1ZSI6MH0seyJ0aW1lIjoxNTAwMCwiaW50ZXJwb2xhdGlvbiI6ImxpbmVhciIsInZhbHVlIjowfSx7InRpbWUiOjE4MDAwLCJpbnRlcnBvbGF0aW9uIjoibGluZWFyIiwidmFsdWUiOjF9XX0seyJwcm9wZXJ0eSI6ImxpZ2h0LnN1biIsImtleWZyYW1lcyI6W3sidGltZSI6MTAwMDAsImludGVycG9sYXRpb24iOiJjdWJpYyIsInZhbHVlIjoxfSx7InRpbWUiOjE4MDAwLCJpbnRlcnBvbGF0aW9uIjoiY3ViaWMiLCJ2YWx1ZSI6MH1dfSx7InByb3BlcnR5IjoiY2FtZXJhLnBvc2l0aW9uIiwia2V5ZnJhbWVzIjpbeyJ0aW1lIjowLCJpbnRlcnBvbGF0aW9uIjoiY3ViaWMiLCJ2YWx1ZSI6eyJ4Ijo1NS44NDA1MDA1MDU2NzUzNiwieSI6NTkuMTc4NTM2NDYzMTkyNzgsInoiOi0xNTUwLjI1MzM2NDkzOTUwNDV9fSx7InRpbWUiOjE4MDAwLCJpbnRlcnBvbGF0aW9uIjoiY3ViaWMiLCJ2YWx1ZSI6eyJ4IjozMC44NjE3MzQ3MzUyODE2MSwieSI6MTEzLjM1NSwieiI6LTE1NDUuMjk3MTMxNTM0NDQzNX19XX0seyJwcm9wZXJ0eSI6ImNhbWVyYS5hbmdsZSIsImtleWZyYW1lcyI6W3sidGltZSI6MCwiaW50ZXJwb2xhdGlvbiI6ImN1YmljIiwidmFsdWUiOjAuODg0MDE2NDE2NjU3MTU1Mn0seyJ0aW1lIjoxODAwMCwiaW50ZXJwb2xhdGlvbiI6ImN1YmljIiwidmFsdWUiOjEuNDAzNzE1NDI1NjMwODY5NX1dfSx7InByb3BlcnR5IjoiY2FtZXJhLnJvdGF0aW9uIiwia2V5ZnJhbWVzIjpbeyJ0aW1lIjowLCJpbnRlcnBvbGF0aW9uIjoiY3ViaWMiLCJ2YWx1ZSI6MS41ODMzNjI4MzUyNDg5Nzk1fSx7InRpbWUiOjE4MDAwLCJpbnRlcnBvbGF0aW9uIjoiY3ViaWMiLCJ2YWx1ZSI6MS41Nzg5NDg2NDk2ODcxMjQzfV19LHsicHJvcGVydHkiOiJjYW1lcmEuZGlzdGFuY2UiLCJrZXlmcmFtZXMiOlt7InRpbWUiOjAsImludGVycG9sYXRpb24iOiJjdWJpYyIsInZhbHVlIjoyMzguMTQ4MDY4NzQ2OTM0NjV9LHsidGltZSI6MTgwMDAsImludGVycG9sYXRpb24iOiJjdWJpYyIsInZhbHVlIjo1fV19XX0seyJkdXJhdGlvbiI6MTAwMDAsInRyYWNrcyI6W3sicHJvcGVydHkiOiJvdmVybGF5Lm9wYWNpdHkiLCJrZXlmcmFtZXMiOlt7InRpbWUiOjAsImludGVycG9sYXRpb24iOiJsaW5lYXIiLCJ2YWx1ZSI6MX0seyJ0aW1lIjoyMDAwLCJpbnRlcnBvbGF0aW9uIjoibGluZWFyIiwidmFsdWUiOjB9LHsidGltZSI6ODAwMCwiaW50ZXJwb2xhdGlvbiI6ImxpbmVhciIsInZhbHVlIjowfSx7InRpbWUiOjEwMDAwLCJpbnRlcnBvbGF0aW9uIjoibGluZWFyIiwidmFsdWUiOjF9XX0seyJwcm9wZXJ0eSI6ImNhbWVyYS5wb3NpdGlvbiIsImtleWZyYW1lcyI6W3sidGltZSI6MCwiaW50ZXJwb2xhdGlvbiI6ImN1YmljIiwidmFsdWUiOnsieCI6MzguMTMyNDE1NzY5MTg1ODI2LCJ5IjoxMTIuMzM0MjU2Mjk4MjkxOCwieiI6LTE1NzUuMjI4NDAzMjEwMDI3fX0seyJ0aW1lIjoxMDAwMCwiaW50ZXJwb2xhdGlvbiI6ImN1YmljIiwidmFsdWUiOnsieCI6MzguMTMyNDE1NzY5MTg1ODI2LCJ5IjoxMTIuMzM0MjU2Mjk4MjkxOCwieiI6LTE1MjUuODI2MTY4MzAzOTUxMX19XX0seyJwcm9wZXJ0eSI6ImNhbWVyYS5hbmdsZSIsImtleWZyYW1lcyI6W3sidGltZSI6MCwiaW50ZXJwb2xhdGlvbiI6ImxpbmVhciIsInZhbHVlIjoxLjQ1NTM2MzUzMjA1OTUxNDR9XX0seyJwcm9wZXJ0eSI6ImNhbWVyYS5yb3RhdGlvbiIsImtleWZyYW1lcyI6W3sidGltZSI6MCwiaW50ZXJwb2xhdGlvbiI6ImxpbmVhciIsInZhbHVlIjoxLjU2NzMyODEwNzY1NTQzNTN9XX0seyJwcm9wZXJ0eSI6ImNhbWVyYS5kaXN0YW5jZSIsImtleWZyYW1lcyI6W3sidGltZSI6MCwiaW50ZXJwb2xhdGlvbiI6ImxpbmVhciIsInZhbHVlIjoxNS44fV19XX1dfQ==
 
             this.init = {
                 params: {
@@ -154,41 +155,25 @@ export class AnimationControls {
             }
         }
 
-        const camera = this._mapCamera(animations);
-        const sunLight = this._mapSunLight(animations);
-        const ambientLight = this._mapAmbientLight(animations);
+        const {mixers, actions} = this._mapMixersActions(animations);
 
-        this.mixers = {
-            camera: camera.mixer,
-            sunLight: sunLight.mixer,
-            ambientLight: ambientLight.mixer,
-        }
-
-        this.actions = {
-            camera: camera.action,
-            sunLight: sunLight.action,
-            ambientLight: ambientLight.action,
-        };
+        this.mixers = mixers;
+        this.actions = actions;
     }
 
     /**
      * @param {Animations} animations
      * @private
      */
-    _mapCamera(animations) {
-        const defaults = {
-            "camera.position": { x: 0, y: 0, z: 0 },
-            "overlay.opacity": 0,
-            "camera.angle": 0,
-            "camera.rotation": 0,
-            "camera.ortho": 0,
-            "camera.distance": 0,
-        }
+    _mapMixersActions(animations) {
+        const propConfig = this._propConfig();
+        const targets = {};
 
-        const tracks = [];
+        const refMap = new RefMap();
 
-        for (const key in defaults) {
-            const sortedKeyFrameValues = this._mapToSortedKeyFrameValues(animations, key, defaults[key]);
+        for (const key in propConfig) {
+            const item = propConfig[key];
+            const sortedKeyFrameValues = this._mapToSortedKeyFrameValues(animations, key, item.default);
 
             const interpolant = (tr, result) => new AniInterpolant(
                 sortedKeyFrameValues.map(kf => kf.interpolation),
@@ -198,189 +183,59 @@ export class AnimationControls {
                 result
             );
 
-            const targetProperty = ((prop) => {
-                switch (prop) {
-                    case "camera.position":
-                        return ".position";
-                    case "overlay.opacity":
-                        return ".backdropOpacity";
-                    case "camera.angle":
-                        return ".angle";
-                    case "camera.rotation":
-                        return ".rotation";
-                    case "camera.ortho":
-                        return ".ortho";
-                    case "camera.distance":
-                        return ".distance";
-                    default:
-                        throw new Error(`Unknown property: ${prop}`);
-                }
-            })(key);
-
             let keyframeTrack = null;
 
-            if (["camera.position"].indexOf(key) >= 0) {
+            if (item.type === "number") {
+                keyframeTrack = new AniNumberKeyframeTrack(
+                    item.property,
+                    sortedKeyFrameValues.map(kf => kf.time),
+                    sortedKeyFrameValues.map(kf => kf.value),
+                    interpolant,
+                );
+            } else if (item.type === "vector") {
                 keyframeTrack = new AniVectorKeyframeTrack(
-                    targetProperty,
+                    item.property,
                     sortedKeyFrameValues.map(kf => kf.time),
                     sortedKeyFrameValues.flatMap(kf => [kf.value.x, kf.value.y, kf.value.z]),
                     interpolant,
                 );
-            } else if (["overlay.opacity", "camera.angle", "camera.rotation", "camera.ortho", "camera.distance"].indexOf(key) >= 0) {
-                keyframeTrack = new AniNumberKeyframeTrack(
-                    targetProperty,
-                    sortedKeyFrameValues.map(kf => kf.time),
-                    sortedKeyFrameValues.map(kf => kf.value),
-                    interpolant,
-                );
             } else {
                 throw new Error(`Unknown property: ${key}`);
             }
 
-            tracks.push(keyframeTrack);
-        }
+            const id = refMap.getId(item.target);
 
-        const durationTotal = animations.scenes.reduce((prev, curr) => prev + curr.duration, 0);
-
-        const clips = new AnimationClip('Action-Camera', durationTotal, tracks);
-        const mixer = new AnimationMixer(this.manager);
-
-        const action = mixer.clipAction(clips);
-        action.setLoop(LoopRepeat);
-        action.startAt(0);                // delay in seconds
-        action.clampWhenFinished = true;
-
-        return {
-            mixer,
-            action,
-        };
-    }
-
-    /**
-     * @param {Animations} animations
-     * @private
-     */
-    _mapSunLight(animations) {
-        const defaults = {
-            "light.sun": 1
-        }
-
-        const tracks = [];
-
-        for (const key in defaults) {
-            const sortedKeyFrameValues = this._mapToSortedKeyFrameValues(animations, key, defaults[key]);
-
-            const interpolant = (tr, result) => new AniInterpolant(
-                sortedKeyFrameValues.map(kf => kf.interpolation),
-                tr.times,
-                tr.values,
-                tr.getValueSize(),
-                result
-            );
-
-            const targetProperty = ((prop) => {
-                switch (prop) {
-                    case "light.sun":
-                        return ".value";
-                    default:
-                        throw new Error(`Unknown property: ${prop}`);
-                }
-            })(key);
-
-            let keyframeTrack = null;
-
-            if (["light.sun"].indexOf(key) >= 0) {
-                keyframeTrack = new AniNumberKeyframeTrack(
-                    targetProperty,
-                    sortedKeyFrameValues.map(kf => kf.time),
-                    sortedKeyFrameValues.map(kf => kf.value),
-                    interpolant,
-                );
-            } else {
-                throw new Error(`Unknown property: ${key}`);
+            if (!targets[id]) {
+                targets[id] = {
+                    target: item.target,
+                    tracks: [],
+                };
             }
 
-            tracks.push(keyframeTrack);
+            targets[id].tracks.push(keyframeTrack);
         }
 
         const durationTotal = animations.scenes.reduce((prev, curr) => prev + curr.duration, 0);
 
-        const clips = new AnimationClip('Action-Camera', durationTotal, tracks);
-        const mixer = new AnimationMixer(this.manager.mapViewer.data.uniforms.sunlightStrength);
+        const mixers = {};
+        const actions = {};
 
-        const action = mixer.clipAction(clips);
-        action.setLoop(LoopRepeat);
-        action.startAt(0);                // delay in seconds
-        action.clampWhenFinished = true;
+        for (const [key, target] of Object.entries(targets)) {
+            const clips = new AnimationClip('Action-Camera', durationTotal, target.tracks);
+            const mixer = new AnimationMixer(target.target);
 
-        return {
-            mixer,
-            action,
-        };
-    }
+            const action = mixer.clipAction(clips);
+            action.setLoop(LoopRepeat);
+            action.startAt(0);                // delay in seconds
+            action.clampWhenFinished = true;
 
-    /**
-     * @param {Animations} animations
-     * @private
-     */
-    _mapAmbientLight(animations) {
-        const defaults = {
-            "light.ambient": 0.1
+            mixers[key] = mixer;
+            actions[key] = action;
         }
 
-        const tracks = [];
-
-        for (const key in defaults) {
-            const sortedKeyFrameValues = this._mapToSortedKeyFrameValues(animations, key, defaults[key]);
-
-            const interpolant = (tr, result) => new AniInterpolant(
-                sortedKeyFrameValues.map(kf => kf.interpolation),
-                tr.times,
-                tr.values,
-                tr.getValueSize(),
-                result
-            );
-
-            const targetProperty = ((prop) => {
-                switch (prop) {
-                    case "light.ambient":
-                        return ".value";
-                    default:
-                        throw new Error(`Unknown property: ${prop}`);
-                }
-            })(key);
-
-            let keyframeTrack = null;
-
-            if (["light.ambient"].indexOf(key) >= 0) {
-                keyframeTrack = new AniNumberKeyframeTrack(
-                    targetProperty,
-                    sortedKeyFrameValues.map(kf => kf.time),
-                    sortedKeyFrameValues.map(kf => kf.value),
-                    interpolant,
-                );
-            } else {
-                throw new Error(`Unknown property: ${key}`);
-            }
-
-            tracks.push(keyframeTrack);
-        }
-
-        const durationTotal = animations.scenes.reduce((prev, curr) => prev + curr.duration, 0);
-
-        const clips = new AnimationClip('Action-Camera', durationTotal, tracks);
-        const mixer = new AnimationMixer(this.manager.mapViewer.data.uniforms.ambientLight);
-
-        const action = mixer.clipAction(clips);
-        action.setLoop(LoopRepeat);
-        action.startAt(0);                // delay in seconds
-        action.clampWhenFinished = true;
-
-        console.log(tracks);
-
         return {
-            mixer,
-            action,
+            mixers,
+            actions,
         };
     }
 
@@ -548,5 +403,18 @@ export class AnimationControls {
         }
 
         return keyFrameValues.toSorted((a, b) => a.time - b.time);
+    }
+
+    _propConfig() {
+        return {
+            "camera.position": {target: this.manager, property: ".position", type: 'vector', default: {x: 0, y: 0, z: 0}},
+            "overlay.opacity": {target: this.manager, property: ".backdropOpacity", type: 'number', default: 0},
+            "camera.angle": {target: this.manager, property: ".angle", type: 'number', default: 0},
+            "camera.rotation": {target: this.manager, property: ".rotation", type: 'number', default: 0},
+            "camera.ortho": {target: this.manager, property: ".ortho", type: 'number', default: 0},
+            "camera.distance": {target: this.manager, property: ".distance", type: 'number', default: 0},
+            "light.sun": {target: this.manager.mapViewer.data.uniforms.sunlightStrength, property: ".value", type: 'number', default: 1},
+            "light.ambient": {target: this.manager.mapViewer.data.uniforms.ambientLight, property: ".value", type: 'number', default: 0.1},
+        };
     }
 }

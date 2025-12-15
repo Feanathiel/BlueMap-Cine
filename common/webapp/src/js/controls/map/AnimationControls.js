@@ -1,4 +1,4 @@
-import {AnimationClip, AnimationMixer, LoopRepeat, Vector3} from "three";
+import {AnimationClip, AnimationMixer, LoopRepeat} from "three";
 import {AniVectorKeyframeTrack} from "@/js/util/animations/keyframe-tracks/AniVectorKeyframeTrack";
 import {AniNumberKeyframeTrack} from "@/js/util/animations/keyframe-tracks/AniNumberKeyframeTrack";
 import {AniInterpolant} from "@/js/util/animations/interpolants/AniInterpolant";
@@ -16,6 +16,8 @@ export class AnimationControls {
         this.manager = null;
 
         this.init = null;
+        this.mixers = {};
+        this.actions = {};
     }
 
     /**
@@ -33,15 +35,19 @@ export class AnimationControls {
     }
 
     play() {
-        if (this.actions?.camera) {
-            this.actions.camera.reset();
-            this.actions.camera.play();
+        if (this.actions) {
+            for (const action of Object.values(this.actions)) {
+                action.reset();
+                action.play();
+            }
         }
     }
 
     pause() {
-        if (this.actions?.camera) {
-            this.actions.camera.halt();
+        if (this.actions) {
+            for (const action of Object.values(this.actions)) {
+                action.halt();
+            }
         }
     }
 
@@ -50,8 +56,10 @@ export class AnimationControls {
      * @param map {Map}
      */
     update(delta, map) {
-        if (this.mixers?.camera) {
-            this.mixers.camera.update(delta);
+        if (this.mixers) {
+            for (const mixer of Object.values(this.mixers)) {
+                mixer.update(delta);
+            }
         }
     }
 
@@ -140,19 +148,26 @@ export class AnimationControls {
      * @private
      */
     _loadFromInit(animations) {
-        if (this.mixers?.camera) {
-            // For some reason this causes low-res
-            this.mixers.camera.stopAllAction();
+        if (this.mixers) {
+            for (const mixer of Object.values(this.mixers)) {
+                mixer.stopAllAction();
+            }
         }
 
         const camera = this._mapCamera(animations);
+        const sunLight = this._mapSunLight(animations);
+        const ambientLight = this._mapAmbientLight(animations);
 
         this.mixers = {
-            camera: camera.mixer
+            camera: camera.mixer,
+            sunLight: sunLight.mixer,
+            ambientLight: ambientLight.mixer,
         }
 
         this.actions = {
-            camera: camera.action
+            camera: camera.action,
+            sunLight: sunLight.action,
+            ambientLight: ambientLight.action,
         };
     }
 
@@ -173,104 +188,7 @@ export class AnimationControls {
         const tracks = [];
 
         for (const key in defaults) {
-            const keyFrameValues = [];
-
-            let durationOffset = 0;
-
-            for (const scene of animations.scenes) {
-                let minKeyFrameValue = null;
-                let maxKeyFrameValue = null;
-                let containsSceneStart = false;
-                let containsSceneEnd = false;
-
-                for (const track of scene.tracks) {
-                    if (track.property !== key) {
-                        continue;
-                    }
-
-                    for (const keyFrame of track.keyframes) {
-                        let time = keyFrame.time;
-
-                        if (keyFrame.time === 0) {
-                            containsSceneStart = true;
-                        }
-
-                        if (keyFrame.time === scene.duration) {
-                            containsSceneEnd = true;
-                            time = keyFrame.time -1;
-                        }
-
-                        const keyFrameValue = {
-                            interpolation: keyFrame.interpolation,
-                            time: time + durationOffset,
-                            value: keyFrame.value,
-                        };
-
-                        if (minKeyFrameValue === null || minKeyFrameValue.time > keyFrameValue.time) {
-                            minKeyFrameValue = keyFrameValue;
-                        }
-
-                        if (maxKeyFrameValue === null || maxKeyFrameValue.time < keyFrameValue.time) {
-                            maxKeyFrameValue = keyFrameValue;
-                        }
-
-                        keyFrameValues.push(keyFrameValue);
-                    }
-                }
-
-                if (!containsSceneStart) {
-                    if (minKeyFrameValue) {
-                        keyFrameValues.push({
-                            interpolation: 'linear',
-                            time: durationOffset,
-                            value: minKeyFrameValue.value
-                        });
-                    } else {
-                        keyFrameValues.push({
-                            interpolation: 'linear',
-                            time: durationOffset,
-                            value: defaults[key]
-                        });
-                    }
-                }
-
-                // Fix the cubic keyframes, since they tween over an additional keyframe
-                if (minKeyFrameValue && minKeyFrameValue.interpolation === "cubic") {
-                    keyFrameValues.push({
-                        interpolation: 'cubic',
-                        time: durationOffset+1,
-                        value: minKeyFrameValue.value
-                    });
-                }
-
-                if (maxKeyFrameValue && maxKeyFrameValue.interpolation === "cubic") {
-                    keyFrameValues.push({
-                        interpolation: 'cubic',
-                        time: durationOffset + scene.duration - 2,
-                        value: maxKeyFrameValue.value
-                    });
-                }
-
-                if (!containsSceneEnd) {
-                    if (maxKeyFrameValue) {
-                        keyFrameValues.push({
-                            interpolation: 'linear',
-                            time: durationOffset + scene.duration - 1,
-                            value: maxKeyFrameValue.value
-                        });
-                    } else {
-                        keyFrameValues.push({
-                            interpolation: 'linear',
-                            time: durationOffset + scene.duration - 1,
-                            value: defaults[key]
-                        });
-                    }
-                }
-
-                durationOffset += scene.duration;
-            }
-
-            const sortedKeyFrameValues = keyFrameValues.toSorted((a, b) => a.time - b.time);
+            const sortedKeyFrameValues = this._mapToSortedKeyFrameValues(animations, key, defaults[key]);
 
             const interpolant = (tr, result) => new AniInterpolant(
                 sortedKeyFrameValues.map(kf => kf.interpolation),
@@ -280,20 +198,37 @@ export class AnimationControls {
                 result
             );
 
-            const targetProp = this._mapToTargetProperty(key);
+            const targetProperty = ((prop) => {
+                switch (prop) {
+                    case "camera.position":
+                        return ".position";
+                    case "overlay.opacity":
+                        return ".backdropOpacity";
+                    case "camera.angle":
+                        return ".angle";
+                    case "camera.rotation":
+                        return ".rotation";
+                    case "camera.ortho":
+                        return ".ortho";
+                    case "camera.distance":
+                        return ".distance";
+                    default:
+                        throw new Error(`Unknown property: ${prop}`);
+                }
+            })(key);
 
             let keyframeTrack = null;
 
             if (["camera.position"].indexOf(key) >= 0) {
                 keyframeTrack = new AniVectorKeyframeTrack(
-                    targetProp.property,
+                    targetProperty,
                     sortedKeyFrameValues.map(kf => kf.time),
                     sortedKeyFrameValues.flatMap(kf => [kf.value.x, kf.value.y, kf.value.z]),
                     interpolant,
                 );
             } else if (["overlay.opacity", "camera.angle", "camera.rotation", "camera.ortho", "camera.distance"].indexOf(key) >= 0) {
                 keyframeTrack = new AniNumberKeyframeTrack(
-                    targetProp.property,
+                    targetProperty,
                     sortedKeyFrameValues.map(kf => kf.time),
                     sortedKeyFrameValues.map(kf => kf.value),
                     interpolant,
@@ -314,6 +249,134 @@ export class AnimationControls {
         action.setLoop(LoopRepeat);
         action.startAt(0);                // delay in seconds
         action.clampWhenFinished = true;
+
+        return {
+            mixer,
+            action,
+        };
+    }
+
+    /**
+     * @param {Animations} animations
+     * @private
+     */
+    _mapSunLight(animations) {
+        const defaults = {
+            "light.sun": 1
+        }
+
+        const tracks = [];
+
+        for (const key in defaults) {
+            const sortedKeyFrameValues = this._mapToSortedKeyFrameValues(animations, key, defaults[key]);
+
+            const interpolant = (tr, result) => new AniInterpolant(
+                sortedKeyFrameValues.map(kf => kf.interpolation),
+                tr.times,
+                tr.values,
+                tr.getValueSize(),
+                result
+            );
+
+            const targetProperty = ((prop) => {
+                switch (prop) {
+                    case "light.sun":
+                        return ".value";
+                    default:
+                        throw new Error(`Unknown property: ${prop}`);
+                }
+            })(key);
+
+            let keyframeTrack = null;
+
+            if (["light.sun"].indexOf(key) >= 0) {
+                keyframeTrack = new AniNumberKeyframeTrack(
+                    targetProperty,
+                    sortedKeyFrameValues.map(kf => kf.time),
+                    sortedKeyFrameValues.map(kf => kf.value),
+                    interpolant,
+                );
+            } else {
+                throw new Error(`Unknown property: ${key}`);
+            }
+
+            tracks.push(keyframeTrack);
+        }
+
+        const durationTotal = animations.scenes.reduce((prev, curr) => prev + curr.duration, 0);
+
+        const clips = new AnimationClip('Action-Camera', durationTotal, tracks);
+        const mixer = new AnimationMixer(this.manager.mapViewer.data.uniforms.sunlightStrength);
+
+        const action = mixer.clipAction(clips);
+        action.setLoop(LoopRepeat);
+        action.startAt(0);                // delay in seconds
+        action.clampWhenFinished = true;
+
+        return {
+            mixer,
+            action,
+        };
+    }
+
+    /**
+     * @param {Animations} animations
+     * @private
+     */
+    _mapAmbientLight(animations) {
+        const defaults = {
+            "light.ambient": 0.1
+        }
+
+        const tracks = [];
+
+        for (const key in defaults) {
+            const sortedKeyFrameValues = this._mapToSortedKeyFrameValues(animations, key, defaults[key]);
+
+            const interpolant = (tr, result) => new AniInterpolant(
+                sortedKeyFrameValues.map(kf => kf.interpolation),
+                tr.times,
+                tr.values,
+                tr.getValueSize(),
+                result
+            );
+
+            const targetProperty = ((prop) => {
+                switch (prop) {
+                    case "light.ambient":
+                        return ".value";
+                    default:
+                        throw new Error(`Unknown property: ${prop}`);
+                }
+            })(key);
+
+            let keyframeTrack = null;
+
+            if (["light.ambient"].indexOf(key) >= 0) {
+                keyframeTrack = new AniNumberKeyframeTrack(
+                    targetProperty,
+                    sortedKeyFrameValues.map(kf => kf.time),
+                    sortedKeyFrameValues.map(kf => kf.value),
+                    interpolant,
+                );
+            } else {
+                throw new Error(`Unknown property: ${key}`);
+            }
+
+            tracks.push(keyframeTrack);
+        }
+
+        const durationTotal = animations.scenes.reduce((prev, curr) => prev + curr.duration, 0);
+
+        const clips = new AnimationClip('Action-Camera', durationTotal, tracks);
+        const mixer = new AnimationMixer(this.manager.mapViewer.data.uniforms.ambientLight);
+
+        const action = mixer.clipAction(clips);
+        action.setLoop(LoopRepeat);
+        action.startAt(0);                // delay in seconds
+        action.clampWhenFinished = true;
+
+        console.log(tracks);
 
         return {
             mixer,
@@ -386,22 +449,104 @@ export class AnimationControls {
         return JSON.parse(atob(data));
     }
 
-    _mapToTargetProperty(prop) {
-        switch (prop) {
-            case "camera.position":
-                return {target: 'camera', property: ".position"};
-            case "overlay.opacity":
-                return {target: 'camera', property: ".backdropOpacity"};
-            case "camera.angle":
-                return {target: 'camera', property: ".angle"};
-            case "camera.rotation":
-                return {target: 'camera', property: ".rotation"};
-            case "camera.ortho":
-                return {target: 'camera', property: ".ortho"};
-            case "camera.distance":
-                return {target: 'camera', property: ".distance"};
-            default:
-                throw new Error(`Unknown property: ${prop}`);
+    _mapToSortedKeyFrameValues(animations, key, defaultsKey) {
+        const keyFrameValues = [];
+
+        let durationOffset = 0;
+
+        for (const scene of animations.scenes) {
+            let minKeyFrameValue = null;
+            let maxKeyFrameValue = null;
+            let containsSceneStart = false;
+            let containsSceneEnd = false;
+
+            for (const track of scene.tracks) {
+                if (track.property !== key) {
+                    continue;
+                }
+
+                for (const keyFrame of track.keyframes) {
+                    let time = keyFrame.time;
+
+                    if (keyFrame.time === 0) {
+                        containsSceneStart = true;
+                    }
+
+                    if (keyFrame.time === scene.duration) {
+                        containsSceneEnd = true;
+                        time = keyFrame.time -1;
+                    }
+
+                    const keyFrameValue = {
+                        interpolation: keyFrame.interpolation,
+                        time: time + durationOffset,
+                        value: keyFrame.value,
+                    };
+
+                    if (minKeyFrameValue === null || minKeyFrameValue.time > keyFrameValue.time) {
+                        minKeyFrameValue = keyFrameValue;
+                    }
+
+                    if (maxKeyFrameValue === null || maxKeyFrameValue.time < keyFrameValue.time) {
+                        maxKeyFrameValue = keyFrameValue;
+                    }
+
+                    keyFrameValues.push(keyFrameValue);
+                }
+            }
+
+            if (!containsSceneStart) {
+                if (minKeyFrameValue) {
+                    keyFrameValues.push({
+                        interpolation: 'linear',
+                        time: durationOffset,
+                        value: minKeyFrameValue.value
+                    });
+                } else {
+                    keyFrameValues.push({
+                        interpolation: 'linear',
+                        time: durationOffset,
+                        value: defaultsKey
+                    });
+                }
+            }
+
+            // Fix the cubic keyframes, since they tween over an additional keyframe
+            if (minKeyFrameValue && minKeyFrameValue.interpolation === "cubic") {
+                keyFrameValues.push({
+                    interpolation: 'cubic',
+                    time: durationOffset+1,
+                    value: minKeyFrameValue.value
+                });
+            }
+
+            if (maxKeyFrameValue && maxKeyFrameValue.interpolation === "cubic") {
+                keyFrameValues.push({
+                    interpolation: 'cubic',
+                    time: durationOffset + scene.duration - 2,
+                    value: maxKeyFrameValue.value
+                });
+            }
+
+            if (!containsSceneEnd) {
+                if (maxKeyFrameValue) {
+                    keyFrameValues.push({
+                        interpolation: 'linear',
+                        time: durationOffset + scene.duration - 1,
+                        value: maxKeyFrameValue.value
+                    });
+                } else {
+                    keyFrameValues.push({
+                        interpolation: 'linear',
+                        time: durationOffset + scene.duration - 1,
+                        value: defaultsKey
+                    });
+                }
+            }
+
+            durationOffset += scene.duration;
         }
+
+        return keyFrameValues.toSorted((a, b) => a.time - b.time);
     }
 }
